@@ -78,7 +78,7 @@ begin
 
   newtodo = Curses::Window.new(5 - 1, width  , 0, 0)
   newtodo.box()
-
+  str = ''
   while !quit
     
     todowin.clear
@@ -136,9 +136,8 @@ begin
     donewin.refresh
     newtodo.refresh
     
-    inputchar = todowin.getch
-    
     if insert_mode == false
+      inputchar = todowin.getch
       case inputchar
       when 'q'
         quit = true
@@ -157,7 +156,7 @@ begin
   				curr_done = ui.list_down(dones, curr_done)
   			end
       when 'n'
-        puts 'test'
+        insert_mode = true
       when 9
   			tab = ui.toggle(tab)
       when 10
@@ -191,8 +190,16 @@ begin
         end
       end
     else
-      ui.label(1, 2  , "NEW TODO", REGULAR_PAIR, newtodo)
-      refresh
+      ui.label(1 , 1, str ,REGULAR_PAIR, newtodo)     
+      inputchar = newtodo.getch
+      if (inputchar == 10) 
+        todo = Todo.new(false, str)
+        todos.push(todo)
+        insert_mode = false
+      else
+        str = str + inputchar.to_s        
+      end
+      
       newtodo.refresh
     end
 
