@@ -157,6 +157,9 @@ begin
   			end
       when 'n'
         insert_mode = true
+        str = ''
+      when 's'
+        ui.remove_element()
       when 9
   			tab = ui.toggle(tab)
       when 10
