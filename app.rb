@@ -52,6 +52,7 @@ end
 begin
 
   quit = false 
+  insert_mode = false
   ui = Ui.new()
   inputchar = ''
   todos = [
@@ -70,23 +71,33 @@ begin
   height = Curses.lines
   width = Curses.cols
   
-  todowin = Curses::Window.new(height - 1, (width / 2)  , 0, 0)
+  todowin = Curses::Window.new(height - 2, (width / 2)  , 0, 0)
   todowin.box()
-  donewin = Curses::Window.new(height - 1, (width / 2) , 0, (width / 2) )
+  donewin = Curses::Window.new(height - 2, (width / 2) , 0, (width / 2) )
   donewin.box()
+
+  newtodo = Curses::Window.new(4 - 1, width  , 0, 0)
+  newtodo.box()
 
   while !quit
     
     todowin.clear
-    todowin.resize(Curses.lines - 1, Curses.cols / 2)
+    todowin.resize(Curses.lines - 3, Curses.cols / 2)
     todowin.move(0, 0)
     todowin.box()
     donewin.clear
-    donewin.resize(Curses.lines - 1, Curses.cols / 2)
+    donewin.resize(Curses.lines - 3, Curses.cols / 2)
     donewin.move(0, Curses.cols / 2)
     donewin.box()
+
+    newtodo.clear
+    newtodo.resize(Curses.lines - 4,0)
+    newtodo.move(Curses.lines - 4, 0)
+    newtodo.box()
+    ui.label(0, 2  , "NEW TODO", REGULAR_PAIR, newtodo)
+
     begin_loop = 1
-    ui.label(0, (width / 4) - 8 , "TODO [ ]", REGULAR_PAIR, todowin)
+    ui.label(0, (width / 4)  , "TODO [ ]", REGULAR_PAIR, todowin)
     todos.each_with_index do |todo, index|
       if index == curr_todo and tab == 'TODO'
         pair = HIGHLIGHT_PAIR
@@ -98,7 +109,7 @@ begin
         ui.label(index + begin_loop, 0 + 1, text,pair, todowin)
     end
 
-    ui.label(0, (width / 4) - 8 , "DONE [x]", REGULAR_PAIR, donewin)
+    ui.label(0, (width / 4)  , "DONE [x]", REGULAR_PAIR, donewin)
     dones.each_with_index do |done, index|
       if index == curr_done and tab == 'DONE'
         pair = HIGHLIGHT_PAIR
@@ -112,7 +123,7 @@ begin
     
     bottombar = "`q` to quit."
     
-    bottombar = bottombar + "\t\tw: #{width} h: #{height} lastchar: #{inputchar}"
+    bottombar = bottombar + "\t\tw: #{width} h: #{height} lastchar: #{inputchar} todos.length: #{todos.length} curr_todo: #{curr_todo} dones.length: #{dones.length} curr_done: #{curr_done}"
     y = height - 1
     empty_str = " " * width
     
@@ -121,49 +132,61 @@ begin
     refresh
     todowin.refresh
     donewin.refresh
-    
+    newtodo.refresh
     inputchar = todowin.getch
-    case inputchar
-    when 'q'
-      quit = true
-    when 'A'
-      case tab
-			when 'TODO'
-				curr_todo = ui.list_up(todos, curr_todo)
-			when 'DONE'
-				curr_done = ui.list_up(dones, curr_done)
-			end
-    when 'B'
-      case tab
-			when 'TODO'
-				curr_todo = ui.list_down(todos, curr_todo)
-			when 'DONE'
-				curr_done = ui.list_down(dones, curr_done)
-			end
-    when 9
-			tab = ui.toggle(tab)
-    when 10
-      case tab
-      when 'TODO'
-        if todos.length > 0
-        todos[curr_todo].completed = !todos[curr_todo].completed
-        dones.push(todos[curr_todo])
-        todos.delete(todos[curr_todo])
-        end
-      when 'DONE'
-        if dones.length > 0
-        dones[curr_done].completed = !dones[curr_done].completed
-        todos.push(dones[curr_done])
-        dones.delete(dones[curr_done])
+    if insert_mode == true
+      case inputchar
+      when 'q'
+        quit = true
+      when 'A'
+        case tab
+  			when 'TODO'
+  				curr_todo = ui.list_up(todos, curr_todo)
+  			when 'DONE'
+  				curr_done = ui.list_up(dones, curr_done)
+  			end
+      when 'B'
+        case tab
+  			when 'TODO'
+  				curr_todo = ui.list_down(todos, curr_todo)
+  			when 'DONE'
+  				curr_done = ui.list_down(dones, curr_done)
+  			end
+      when 'n'
+        puts 'test'
+      when 9
+  			tab = ui.toggle(tab)
+      when 10
+        case tab
+        when 'TODO'
+          if todos.length > 0
+          todos[curr_todo].completed = !todos[curr_todo].completed
+          dones.push(todos[curr_todo])
+          todos.delete(todos[curr_todo])
+            if todos.length == curr_todo
+              curr_todo = curr_todo -1
+            end
+          end
+        when 'DONE'
+          if dones.length > 0
+          dones[curr_done].completed = !dones[curr_done].completed
+          todos.push(dones[curr_done])
+            dones.delete(dones[curr_done])
+            if dones.length == curr_done
+              curr_done = curr_done - 1
+            end
+          end
         end
       end
-     
+    else
+      inputtodo = newtodo.getch
+
     end
 
   end
-  refresh
   todowin.close
   donewin.close
+  newtodo.close
 
 ensure
   close_screen
