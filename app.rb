@@ -1,5 +1,4 @@
 require 'curses'
-require './Todo'
 include Curses
 
 file_path = ARGV[0]
