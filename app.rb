@@ -2,6 +2,12 @@ require 'curses'
 require './Todo'
 include Curses
 
+file_path = ARGV[0]
+if file_path == nil
+  puts "Error: file path is not provided"
+  exit
+end
+
 Curses.init_screen
 Curses.start_color
 Curses.noecho
@@ -47,6 +53,40 @@ class Ui
 		end
 	end
 
+  def remove_element(lists, list_curr)
+    lists = lists.delete(lists[list_curr])
+  end
+
+  def list_transfer(list_dest, list_src, list_src_curr)
+    if (list_src.length > list_src_curr and list_src.length > 0)
+      list_dest.push(list_src[list_src_curr])
+      list_src.delete_at(list_src_curr)
+    end
+  end
+
+  def parse_item(line, todos, dones, index)
+    todo_prefix = "TODO:"
+    done_prefix = "DONE:"
+    if line.start_with?(todo_prefix)
+      todos.push(line.delete_prefix(todo_prefix).strip)
+    elsif line.start_with?(done_prefix)
+      dones.push(line.delete_prefix(done_prefix).strip)
+    else
+      raise RuntimeError, "ill-formed item line #{index} in todo file"
+    end
+  end
+
+  def save_item(file , todos, dones)
+      file = File.open('todo','w')
+      todos.each do |todo|
+        file.puts("TODO: #{todo}")
+      end
+      dones.each do |done|
+        file.puts("DONE: #{done}")
+      end
+      file.close
+  end
+
 end
 
 begin
@@ -55,16 +95,19 @@ begin
   insert_mode = false
   ui = Ui.new()
   inputchar = ''
-  todos = [
-    Todo.new(false, "app php"),
-    Todo.new(false, "app C"),
-    Todo.new(false, "app ruby"),
-  ]
-  dones = [
-    Todo.new(true, "app php"),
-    Todo.new(true, "app C"),
-    Todo.new(true, "app ruby"),
-  ]
+  # todos = [
+  #   Todo.new(false, "app php"),
+  #   Todo.new(false, "app C"),
+  #   Todo.new(false, "app ruby"),
+  # ]
+  # dones = [
+  #   Todo.new(true, "app php"),
+  #   Todo.new(true, "app C"),
+  #   Todo.new(true, "app ruby"),
+  # ]
+  todos = Array.new()
+  dones = Array.new()
+
   curr_todo = 0
   curr_done = 0
   tab = "TODO"
@@ -79,6 +122,13 @@ begin
   newtodo = Curses::Window.new(5 - 1, width  , 0, 0)
   newtodo.box()
   str = ''
+
+  file = File.open(file_path)
+
+  file.each_with_index do |line, index|
+    ui.parse_item(line, todos, dones, index)  
+  end
+
   while !quit
     
     todowin.clear
@@ -107,7 +157,7 @@ begin
         pair = REGULAR_PAIR
       end
       #puts todo.completed
-        text = "[ ] #{todo.text}"
+        text = "[ ] #{todo}"
         ui.label(index + begin_loop, 0 + 1, text,pair, todowin)
     end
 
@@ -119,7 +169,7 @@ begin
         pair = REGULAR_PAIR
       end
       #puts todo.completed
-        text = "[x] #{done.text}"
+        text = "[x] #{done}"
         ui.label(index + begin_loop , 0 + 1, text,pair, donewin)
     end
     
@@ -141,6 +191,8 @@ begin
       case inputchar
       when 'q'
         quit = true
+      when 's'
+        ui.save_item(file , todos, dones)
       when 'A'
         case tab
   			when 'TODO'
@@ -158,17 +210,20 @@ begin
       when 'n'
         insert_mode = true
         str = ''
-      when 's'
-        ui.remove_element()
+      when 'd'
+        case tab
+        when 'TODO'
+          ui.remove_element(todos, curr_todo)
+        when 'DONE'
+          ui.remove_element(dones, curr_done)
+        end
       when 9
   			tab = ui.toggle(tab)
       when 10
         case tab
         when 'TODO'
           if todos.length > 0
-            todos[curr_todo].completed = !todos[curr_todo].completed
-            dones.push(todos[curr_todo])
-            todos.delete(todos[curr_todo])
+            ui.list_transfer(dones, todos, curr_todo)
             if todos.length == curr_todo
               curr_todo = curr_todo -1
             end
@@ -179,9 +234,7 @@ begin
           end
         when 'DONE'
           if dones.length > 0
-            dones[curr_done].completed = !dones[curr_done].completed
-            todos.push(dones[curr_done])
-            dones.delete(dones[curr_done])
+            ui.list_transfer(todos, dones, curr_done)
             if dones.length == curr_done
               curr_done = curr_done - 1
             end
@@ -196,8 +249,8 @@ begin
       ui.label(1 , 1, str ,REGULAR_PAIR, newtodo)     
       inputchar = newtodo.getch
       if (inputchar == 10) 
-        todo = Todo.new(false, str)
-        todos.push(todo)
+        todo = str
+        todos.push("#{todo}")
         insert_mode = false
       else
         str = str + inputchar.to_s        
