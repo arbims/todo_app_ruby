@@ -94,16 +94,7 @@ begin
   insert_mode = false
   ui = Ui.new()
   inputchar = ''
-  # todos = [
-  #   Todo.new(false, "app php"),
-  #   Todo.new(false, "app C"),
-  #   Todo.new(false, "app ruby"),
-  # ]
-  # dones = [
-  #   Todo.new(true, "app php"),
-  #   Todo.new(true, "app C"),
-  #   Todo.new(true, "app ruby"),
-  # ]
+
   todos = Array.new()
   dones = Array.new()
 
@@ -251,6 +242,8 @@ begin
         todo = str
         todos.push("#{todo}")
         insert_mode = false
+      elsif (inputchar == 127)
+        str = str.chop!
       else
         str = str + inputchar.to_s        
       end
